@@ -1,6 +1,6 @@
-dataset: custom
+dataset: weather
 features: multi
-target: temp
+target: null
 seq_len: 96
 horizon: 1
 cut: null

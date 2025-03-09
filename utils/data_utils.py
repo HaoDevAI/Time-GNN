@@ -8,6 +8,7 @@ dataset_loc = {
     "traffic" : "datasets/traffic.txt", 
     "exchange" : "datasets/exchange_rate.txt", 
     "weather" : "datasets/WTH.csv",
+    "custom": "datasets/data_converted.csv"
 }
 
 #number of variables in the time series 
@@ -16,7 +17,8 @@ dataset_dims = {
     "weather" : 12,
     "exchange" : 8,
     "traffic" : 862,
-    "solar" : 137
+    "solar" : 137,
+    "custom" : 14
 }
 
 class StandardScaler():
@@ -78,11 +80,11 @@ def read_data(dataset, features, seq_len, target = "", scale = True, cut = None)
         else:
             df = df[df.columns[-1]]
     if features == "multi":
-        if dataset in ['electricity', 'weather']:
+        if dataset in ['electricity', 'weather', 'custom']:
             df = df[df.columns[1:]]
         else:
             df = df[df.columns[:]]
-  
+    print(df.info())
     if scale: 
         scaler = StandardScaler()
         train_data = df[0:n_train]

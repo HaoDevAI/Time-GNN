@@ -15,7 +15,7 @@ from models.TimeGNN import TimeGNN
 
 #load experiment configs
 with open('Experiment_config.yaml', 'r') as f:
-    config = list(yaml.load_all(f))[0]
+    config = list(yaml.load_all(f,Loader=yaml.SafeLoader))[0]
     
 def train(model):
     model.train()
@@ -92,7 +92,7 @@ input_dim, output_dim = get_dataset_dims(config["dataset"],config["features"])
 
 #Load data
 train_loader, val_loader, test_loader, test_loader_one, scaler = get_dataloaders(config["dataset"], seq_len = config["seq_len"], 
-                                                                                 horizon = config["horizon"], features = config["features"], 
+                                                                                 horizon = config["horizon"], features = config["features"], target=config["target"],
                                                                                  cut = config["cut"])
 
 #Model Args 

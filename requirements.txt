@@ -1,8 +1,7 @@
-matplotlib==3.4.2
-numpy==1.20.3
-pandas==1.2.4
-PyYAML==5.4.1
-scikit_learn==0.24.2
-torch==1.12.1
-torch_geometric==2.1.0
-torch_geometric_temporal==0.54.0
+matplotlib
+numpy
+pandas
+PyYAML
+scikit_learn
+torch_geometric
+torch_geometric_temporal
