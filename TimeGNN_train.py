@@ -88,12 +88,12 @@ save_dir, model_dir = create_directories(model_type, output_dir, experiment_numb
 print(save_dir)
 
 #Dataset args    
-input_dim, output_dim = get_dataset_dims(config["dataset"],config["features"])
+input_dim, output_dim = get_dataset_dims(config["dataset"],config["features"],config["targets"])
 
 #Load data
 train_loader, val_loader, test_loader, test_loader_one, scaler = get_dataloaders(config["dataset"], seq_len = config["seq_len"], 
-                                                                                 horizon = config["horizon"], features = config["features"], target=config["target"],
-                                                                                 cut = config["cut"])
+                                                                                 horizon = config["horizon"], features = config["features"],
+                                                                                 target=config["target"],targets=config["targets"], cut = config["cut"])
 
 #Model Args 
 args = {
@@ -144,7 +144,7 @@ for i in range(0, config["runs"]):
 
     model = TimeGNN(loss, **args).to(device)
     optimizer = optim.Adam(model.parameters(), weight_decay = 1e-5)
-    
+    print(args)
     train_time = []    
     for epoch in range(config["n_epochs"]):
         t0 = time.time()

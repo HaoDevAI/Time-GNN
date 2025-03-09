@@ -1,6 +1,7 @@
 dataset: custom
 features: multi
-target: temp
+target:
+targets : [0,3,4]
 seq_len: 96
 horizon: 1
 cut: null

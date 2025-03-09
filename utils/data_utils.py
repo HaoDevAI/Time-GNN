@@ -40,11 +40,14 @@ class StandardScaler():
         std = torch.from_numpy(self.std).type_as(data).to(data.device) if torch.is_tensor(data) else self.std
         return (data * std) + mean
 
-def get_dataset_dims(dataset, mode):
+def get_dataset_dims(dataset, mode, targets):
     if mode == "single":
         return 1, 1
     elif mode == "multi":
-        return dataset_dims[dataset], dataset_dims[dataset]
+        if targets:
+            return dataset_dims[dataset], len(targets)
+        else:
+            return dataset_dims[dataset], dataset_dims[dataset]
     else: 
         print("Invalid feature mode " + mode)
         assert False
@@ -96,12 +99,18 @@ def read_data(dataset, features, seq_len, target = "", scale = True, cut = None)
     return data[train_begin:train_end], data[test_begin:test_end], data[val_begin:val_end], scaler, [train_begin, test_begin, val_begin]
 
 class seq_data(Dataset):
-    def __init__(self, data, start, seq_len = 20, horizon = 1, args = None):
+    def __init__(self, data, start, seq_len = 20, horizon = 1,targets=None, args = None):
         self.data = data
         self.seq_len = seq_len 
         self.horizon = horizon
         self.start = start   
         self.mode = "single-step"
+
+        # Nếu không truyền target_cols thì mặc định lấy tất cả cột làm nhãn
+        if targets is None:
+            self.targets = list(range(self.data.shape[1]))
+        else:
+            self.targets = targets
 
     def __getitem__(self, index):
         seq_begin = index 
@@ -110,26 +119,30 @@ class seq_data(Dataset):
 
         if self.mode == "single-step":
             label_begin = seq_end + self.horizon - 1
-
         else:
             label_begin = seq_end
+        # X = toàn bộ cột (multi-feature)
+        X = self.data[seq_begin:seq_end, :]
 
-        return self.data[seq_begin:seq_end], self.data[label_begin: label_end]
+        # Y = chỉ các cột target bạn muốn
+        Y = self.data[label_begin:label_end, self.targets]
+
+        return X,Y
 
     def __len__(self):
         return len(self.data) - self.seq_len - self.horizon + 1
 
 def get_dataloaders(dataset, batch_size = 16, seq_len = 20, horizon = 1, features = "single", 
-                    target = "", scale = True, cut = None, args = None):
+                    target = "",targets= None, scale = True, cut = None, args = None):
     assert dataset in dataset_loc.keys()
     assert features in ["single", "multi"]   
     print(dataset + " " + features)  
     
     train, test, val, scaler, starts = read_data(dataset, features, seq_len, target, cut = cut)
 
-    train_data = seq_data(train, starts[0], seq_len, horizon, args)
-    test_data = seq_data(test, starts[1], seq_len, horizon, args)
-    val_data = seq_data(val, starts[2], seq_len, horizon, args)
+    train_data = seq_data(train, starts[0], seq_len, horizon,targets, args)
+    test_data = seq_data(test, starts[1], seq_len, horizon, targets, args)
+    val_data = seq_data(val, starts[2], seq_len, horizon, targets, args)
     
     print(train_data.data[0].shape)
 
