@@ -139,7 +139,7 @@ def main():
     prediction_inv = scaler_target.inverse_transform(prediction)
 
     # Extract the true values for [temp, humidity, precip] from the target row.
-    true_values = true_row[feature_columns].values.astype(np.float32)[:3]
+    true_values = true_row[feature_columns].values.astype(np.float32)[target_indices]
 
     # Print the comparison.
     print("\nFor target date {}:".format(date_str))
