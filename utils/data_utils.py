@@ -22,9 +22,10 @@ dataset_dims = {
 }
 
 class StandardScaler():
-    def __init__(self):
+    def __init__(self, targets= None):
         self.mean = 0.
         self.std = 1.
+        self.targets = targets
     
     def fit(self, data):
         self.mean = data.mean(0)
@@ -35,9 +36,18 @@ class StandardScaler():
         std = torch.from_numpy(self.std).type_as(data).to(data.device) if torch.is_tensor(data) else self.std
         return (data - mean) / std
 
-    def inverse_transform(self, data):      
-        mean = torch.from_numpy(self.mean).type_as(data).to(data.device) if torch.is_tensor(data) else self.mean
-        std = torch.from_numpy(self.std).type_as(data).to(data.device) if torch.is_tensor(data) else self.std
+    def inverse_transform(self, data):
+        if torch.is_tensor(data):
+            mean = torch.from_numpy(self.mean).type_as(data).to(data.device)
+            std = torch.from_numpy(self.std).type_as(data).to(data.device)
+        else:
+            mean = self.mean
+            std = self.std
+
+        if self.targets is not None:
+            # Lấy các giá trị mean, std tương ứng với target được chọn
+            mean = mean[self.targets]
+            std = std[self.targets]
         return (data * std) + mean
 
 def get_dataset_dims(dataset, mode, targets):
@@ -52,7 +62,7 @@ def get_dataset_dims(dataset, mode, targets):
         print("Invalid feature mode " + mode)
         assert False
 
-def read_data(dataset, features, seq_len, target = "", scale = True, cut = None):
+def read_data(dataset, features, seq_len, target = "",targets = None, scale = True, cut = None):
     df = pd.read_csv(dataset_loc[dataset])
     scaler = None
   
@@ -89,7 +99,7 @@ def read_data(dataset, features, seq_len, target = "", scale = True, cut = None)
             df = df[df.columns[:]]
     print(df.info())
     if scale: 
-        scaler = StandardScaler()
+        scaler = StandardScaler(targets=targets)
         train_data = df[0:n_train]
         scaler.fit(train_data.values)
         data = scaler.transform(df.values)
@@ -138,7 +148,7 @@ def get_dataloaders(dataset, batch_size = 16, seq_len = 20, horizon = 1, feature
     assert features in ["single", "multi"]   
     print(dataset + " " + features)  
     
-    train, test, val, scaler, starts = read_data(dataset, features, seq_len, target, cut = cut)
+    train, test, val, scaler, starts = read_data(dataset, features, seq_len, target, targets, cut = cut)
 
     train_data = seq_data(train, starts[0], seq_len, horizon,targets, args)
     test_data = seq_data(test, starts[1], seq_len, horizon, targets, args)

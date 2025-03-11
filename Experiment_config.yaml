@@ -2,10 +2,10 @@ dataset: custom
 features: multi
 target:
 targets : [0,3,4]
-seq_len: 96
+seq_len: 7
 horizon: 1
 cut: null
-runs: 2
-n_epochs: 50
+runs: 1
+n_epochs: 100
 val_interval: 1
 output_dir: outputs/
