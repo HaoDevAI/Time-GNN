@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 # Load dữ liệu từ file CSV
-df = pd.read_csv('E:\\HaoDevAI\\DAP391m_Project\\Time-GNN\\datasets\\data.csv')  # thay "data.csv" bằng đường dẫn file của bạn
+df = pd.read_csv('Time-GNN/datasets/data.csv')
 
 # Chuyển đổi cột 'day' sang dạng chu kỳ (giả sử số ngày tối đa là 31)
 df['day_sin'] = np.sin(2 * np.pi * df['day'] / 31)
@@ -19,6 +19,6 @@ df['city_HoChiMinh'] = df['city_HoChiMinh'].astype(int)
 df.drop(columns=['day', 'month'], inplace=True)
 
 # Lưu lại file mới sau khi chuyển đổi
-df.to_csv("E:\\HaoDevAI\\DAP391m_Project\\Time-GNN\\datasets\\data_converted.csv", index=False)
+df.to_csv("Time-GNN/datasets/data_converted.csv", index=False)
 
 print("Đã chuyển đổi và lưu file thành công!")
