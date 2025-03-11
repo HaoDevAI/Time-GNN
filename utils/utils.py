@@ -78,12 +78,40 @@ def format_predictions(predictions, values, index_start, features, scaler = None
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, accuracy_score, f1_score
 
-def calculate_metrics(df):
-     return {'mae' : mean_absolute_error(df.value.tolist(), df.prediction.tolist()),
-             'mse' : mean_squared_error(df.value.tolist(), df.prediction.tolist()),
-             'r2' : r2_score(df.value.tolist(), df.prediction.tolist(), multioutput = "variance_weighted"),}
 
-def metrics(predictions, values, total_metrics, scaler, index_start, features, train_time, inf_time):  
+def calculate_metrics(df):
+    # Lấy dữ liệu dưới dạng list
+    y_true = df.value.tolist()
+    y_pred = df.prediction.tolist()
+
+    # Tính các chỉ số gốc
+    mae = mean_absolute_error(y_true, y_pred)
+    mse = mean_squared_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred, multioutput="variance_weighted")
+
+    # Thêm RMSE
+    rmse = np.sqrt(mse)
+
+    # Thêm MAPE, bỏ qua những giá trị y_true=0 để tránh chia 0
+    y_true_arr = np.array(y_true)
+    y_pred_arr = np.array(y_pred)
+    mask = (y_true_arr != 0)
+    if mask.sum() == 0:
+        # Trường hợp toàn bộ y=0
+        mape = np.nan
+    else:
+        mape = np.mean(np.abs((y_true_arr[mask] - y_pred_arr[mask]) / y_true_arr[mask])) * 100
+
+    return {
+        'mae': mae,
+        'mse': mse,
+        'rmse': rmse,
+        'mape': mape,
+        'r2': r2
+    }
+
+
+def metrics(predictions, values, total_metrics, scaler, index_start, features, train_time, inf_time):
     df_result = format_predictions(predictions, values, index_start, features, scaler = scaler)
 
     if df_result['prediction'].isnull().values.any():
