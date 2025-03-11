@@ -1,0 +1,14 @@
+dataset: custom
+features: multi
+target: null
+targets:
+- 0
+- 3
+- 4
+seq_len: 7
+horizon: 1
+cut: null
+runs: 1
+n_epochs: 100
+val_interval: 1
+output_dir: outputs/
