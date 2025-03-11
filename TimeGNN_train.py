@@ -187,6 +187,25 @@ for i in range(0, config["runs"]):
     results_best.append(df_results_best)
     print("")
 
+
+# Plot and save loss curves
+# Define the directory for saving plots
+plot_dir = os.path.join(save_dir, 'plots')
+os.makedirs(plot_dir, exist_ok=True)
+
+plt.figure(figsize=(10, 6))
+plt.plot(train_losses, label='Training Loss', color='blue')
+plt.scatter(val_epoch, val_losses, label='Validation Loss', color='red')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('Training and Validation Loss')
+plt.legend()
+plot_path = os.path.join(plot_dir, 'loss_plot.png')
+plt.savefig(plot_path)
+plt.close()
+print(f"Loss plot saved to: {plot_path}")
+
+
 print("DONE")
 print(model_type)
 print(config["dataset"])
