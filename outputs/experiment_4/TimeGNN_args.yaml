@@ -1,0 +1,9 @@
+input_dim: 14
+output_dim: 4
+seq_len: 7
+hidden_dim: 64
+batch_size: 32
+keep_self_loops: false
+enforce_consecutive: false
+block_size: 3
+aggregate: last

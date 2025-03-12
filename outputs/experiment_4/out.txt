@@ -1,0 +1,23 @@
+TimeGNN
+custom
+horizon 1
+
+Best Models Aggregate:
+mae 4.256 ± nan
+mse 124.504 ± nan
+rmse 11.158 ± nan
+mape 73118772.277 ± nan
+r2 0.011 ± nan
+train time (s) 6.332 ± nan
+inference time (ms) 3.205 ± nan
+4.256 ± nan,124.504 ± nan,11.158 ± nan,73118772.277 ± nan,0.011 ± nan,6.332 ± nan,3.205 ± nan
+
+Last Models Aggregate:
+mae 4.233 ± nan
+mse 124.396 ± nan
+rmse 11.153 ± nan
+mape 56148977.070 ± nan
+r2 0.012 ± nan
+train time (s) 6.332 ± nan
+inference time (ms) 3.206 ± nan
+4.233 ± nan,124.396 ± nan,11.153 ± nan,56148977.070 ± nan,0.012 ± nan,6.332 ± nan,3.206 ± nan
