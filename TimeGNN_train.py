@@ -101,8 +101,8 @@ args = {
     "output_dim" : output_dim,
     "seq_len" : config["seq_len"],  
     
-    "hidden_dim" : 32,    
-    "batch_size" : 16,    
+    "hidden_dim" : config["hidden_dim"],
+    "batch_size" : config["batch_size"],
     
     #Edge Learning Args
     "keep_self_loops" : False,
@@ -173,7 +173,7 @@ for i in range(0, config["runs"]):
     predictions, values = test(test_loader_one, load_state = False)
     t1 = time.time()
     inf_time = t1-t0
-    metrics_last, df_results_last = metrics(predictions, values, metrics_best, scaler, test_loader_one.dataset.start, config["features"], train_time, inf_time)
+    metrics_last, df_results_last = metrics(predictions, values, metrics_last, scaler, test_loader_one.dataset.start, config["features"], train_time, inf_time)
     results_last.append(df_results_last)  
 
     print("")
@@ -195,7 +195,7 @@ os.makedirs(plot_dir, exist_ok=True)
 
 plt.figure(figsize=(10, 6))
 plt.plot(train_losses, label='Training Loss', color='blue')
-plt.scatter(val_epoch, val_losses, label='Validation Loss', color='red')
+plt.plot(val_losses, label='Validation Loss', color='red')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.title('Training and Validation Loss')

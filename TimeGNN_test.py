@@ -12,7 +12,7 @@ from utils.utils import masked_mae
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 DATA = "datasets/data_converted.csv"
-MODEL = "outputs/experiment_0/TimeGNN_models/best_run0.pt"
+MODEL = "outputs/experiment_4/TimeGNN_models/best_run0.pt"
 
 
 def predict(city: int, day: str) -> np.ndarray:
@@ -63,7 +63,7 @@ def predict(city: int, day: str) -> np.ndarray:
     # Xác định cột đặc trưng (loại bỏ cột datetime)
     feature_columns = df.columns[1:]
     # Giả sử target [temp, humidity, precip] nằm ở các chỉ số [0, 3, 4] trong feature_columns
-    target_indices = [0, 3, 4]
+    target_indices = config['targets']
     target_names = [feature_columns[i] for i in target_indices]
 
     # Lấy scaler được huấn luyện trên toàn bộ dataset của thành phố (giữ nguyên các tham số)
@@ -78,10 +78,10 @@ def predict(city: int, day: str) -> np.ndarray:
 
     # Load mô hình và checkpoint (khởi tạo 1 lần)
     input_dim = len(feature_columns)
-    hidden_dim = 32  # cần khớp với quá trình training
-    output_dim = 3
-    seq_len = 7
-    batch_size = 1
+    hidden_dim = config["hidden_dim"]  # cần khớp với quá trình training
+    output_dim = len(config["targets"])
+    seq_len = config["seq_len"]
+    batch_size = config["batch_size"]
 
     model_args = {
         "input_dim": input_dim,
@@ -167,8 +167,6 @@ def predict(city: int, day: str) -> np.ndarray:
         return prediction_inv
 
 
-# Ví dụ cách gọi hàm:
 if __name__ == "__main__":
-    # Giả sử muốn dự đoán cho thành phố Hanoi (0) vào ngày "01/01/2025"
-    y_pred = predict(0, "13/03/2025")
-    print("Dự đoán [temp, humidity, precip]:", y_pred)
+    y_pred = predict(0, "30/03/2025")
+    print("Dự đoán [tempmax, tempmin, humidity, precip]:", y_pred)
