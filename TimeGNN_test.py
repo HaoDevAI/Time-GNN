@@ -15,90 +15,74 @@ DATA = "datasets/data_converted.csv"
 MODEL = "outputs/experiment_0/TimeGNN_models/best_run0.pt"
 
 
-def main():
-    # Read experiment config from YAML file.
+def predict(city: int, day: str) -> np.ndarray:
+    """
+    Dự đoán giá trị [temp, humidity, precip] cho một thành phố và ngày cụ thể.
+    Nếu ngày cần dự đoán nằm ngoài dataset (tương lai), sẽ dự đoán tuần tự từng ngày từ ngày cuối dataset.
+
+    Parameters:
+        city (int): Mã thành phố (0: Hanoi, 1: DaNang, 2: HoChiMinh)
+        day (str): Ngày cần dự đoán theo định dạng dd/mm/yyyy
+
+    Returns:
+        np.ndarray: Dự đoán đã inverse transform (mảng gồm 3 giá trị)
+
+    Raises:
+        ValueError: Nếu gặp lỗi đọc file config, dataset hoặc dữ liệu không hợp lệ.
+    """
+    # Đọc file cấu hình
     try:
         with open('Experiment_config.yaml', 'r') as f:
             config = list(yaml.load_all(f, Loader=yaml.SafeLoader))[0]
     except Exception as e:
-        print("Error reading config file:", e)
-        sys.exit(1)
+        raise ValueError("Error reading config file: " + str(e))
 
-    # Load dataset (assuming 'custom' dataset, adjust if needed)
-    # The training code uses "data_converted.csv" for the "custom" dataset.
+    # Load dataset
     try:
         df = pd.read_csv(DATA)
     except Exception as e:
-        print("Error loading dataset:", e)
-        sys.exit(1)
+        raise ValueError("Error loading dataset: " + str(e))
 
-    # Convert the 'datetime' column to datetime objects (dayfirst=True)
+    # Chuyển đổi cột 'datetime' sang datetime objects (dayfirst=True)
     df["datetime"] = pd.to_datetime(df["datetime"], dayfirst=True)
 
-    city_input = input("Enter the city (1 for DaNang/2 for Hanoi/3 for HoChiMinh): ")
-    # Map user input to column name
+    # Map giá trị city thành tên cột phù hợp
     valid_cities = {
-        "1": "city_DaNang",
-        "2": "city_Hanoi",
-        "3": "city_HoChiMinh"
+        0: "city_Hanoi",
+        1: "city_DaNang",
+        2: "city_HoChiMinh"
     }
-    if city_input not in valid_cities:
-        print("Invalid city. Choose city from 1,2 or 3.")
-        sys.exit(1)
-    city_col = valid_cities[city_input]
+    if city not in valid_cities:
+        raise ValueError("Invalid city. Choose city from 0, 1, or 2.")
+    city_col = valid_cities[city]
+
+    # Lọc dữ liệu cho thành phố được chọn và sắp xếp theo datetime
     df_city = df[df[city_col] == 1].copy()
     df_city_sorted = df_city.sort_values("datetime").reset_index(drop=True)
-    # Ask the user for the target date.
-    date_str = input("Enter the target day (dd/mm/yyyy): ").strip()
-    try:
-        target_date = datetime.datetime.strptime(date_str, "%d/%m/%Y")
-    except ValueError:
-        print("Incorrect date format. Please use dd/mm/yyyy.")
-        sys.exit(1)
 
-    # Find the row corresponding to the target date.
-    target_rows = df_city_sorted[df_city_sorted["datetime"] == target_date]
-    if target_rows.empty:
-        print("The specified date was not found in the dataset for this city.")
-        sys.exit(1)
-    target_idx_city = target_rows.index[0]
-
-    # Ensure we have at least 7 days of history before the target date.
-    if target_idx_city < 7:
-        print("Not enough historical data (need 7 days before the target date) for this city.")
-        sys.exit(1)
-
-    # Determine feature columns (all except the date column).
+    # Xác định cột đặc trưng (loại bỏ cột datetime)
     feature_columns = df.columns[1:]
-    # For prediction, we assume the targets [temp, humidity, precip] are the first three features.
+    # Giả sử target [temp, humidity, precip] nằm ở các chỉ số [0, 3, 4] trong feature_columns
     target_indices = [0, 3, 4]
+    target_names = [feature_columns[i] for i in target_indices]
 
-    # Extract the 7-day history before the target day.
-    input_seq_df = df_city_sorted.iloc[target_idx_city - 7: target_idx_city][feature_columns]
-    # Also extract the true values from the target day.
-    true_row = target_rows.iloc[0]
-
-    # Convert to numpy array and ensure type is float32.
-    input_seq = input_seq_df.values.astype(np.float32)  # Shape: (7, num_features)
-
-    # Create and fit a scaler on the entire dataset features (consistent with training).
+    # Lấy scaler được huấn luyện trên toàn bộ dataset của thành phố (giữ nguyên các tham số)
     scaler = StandardScaler()
     scaler.fit(df_city_sorted[feature_columns].values)
-    input_seq_scaled = scaler.transform(input_seq)
 
-    # Prepare the input tensor for the model with shape (batch_size, seq_len, input_dim).
-    x = torch.tensor(input_seq_scaled).unsqueeze(0).to(device)  # Shape: (1, 7, input_dim)
-    x = x.float()  # Ensure the input is float32.
+    # Chuyển đổi chuỗi ngày thành datetime object
+    try:
+        target_date = datetime.datetime.strptime(day, "%d/%m/%Y")
+    except ValueError:
+        raise ValueError("Incorrect date format. Please use dd/mm/yyyy.")
 
-    # Use the config to determine model parameters.
-    # For our test, we override seq_len to 7 and output_dim to 3 (for [temp, humidity, precip]).
+    # Load mô hình và checkpoint (khởi tạo 1 lần)
     input_dim = len(feature_columns)
-    hidden_dim = 32  # This should match the training setting.
+    hidden_dim = 32  # cần khớp với quá trình training
     output_dim = 3
     seq_len = 7
     batch_size = 1
 
-    # Build the model with parameters from config and our test overrides.
     model_args = {
         "input_dim": input_dim,
         "hidden_dim": hidden_dim,
@@ -110,42 +94,81 @@ def main():
         "enforce_consecutive": config.get("enforce_consecutive", False),
         "block_size": config.get("block_size", 3)
     }
-    # Use masked_mae as loss function, as in training.
-    model = TimeGNN(loss=masked_mae, **model_args).to(device)
 
-    # Load the trained checkpoint.
+    model = TimeGNN(loss=masked_mae, **model_args).to(device)
     try:
         state_dict = torch.load(MODEL, map_location=device)
         model.load_state_dict(state_dict)
     except Exception as e:
-        print("Error loading checkpoint:", e)
-        sys.exit(1)
-
-    # Ensure model and input are in float32.
+        raise ValueError("Error loading checkpoint: " + str(e))
     model = model.float()
-    x = x.float()
 
-    # Run prediction.
-    model.eval()
-    with torch.no_grad():
-        prediction = model(x)
-        prediction = prediction.squeeze().cpu().numpy()  # Shape: (output_dim,)
+    # Xác định ngày cuối hiện có trong dataset
+    last_date = df_city_sorted["datetime"].max()
 
-    # Inverse-transform the predictions.
-    # Create a temporary scaler that uses the same mean and std for the target features.
-    scaler_target = StandardScaler(targets=target_indices)
-    scaler_target.mean = scaler.mean  # Use full feature scaler parameters.
-    scaler_target.std = scaler.std
-    prediction_inv = scaler_target.inverse_transform(prediction)
+    # Nếu target_date nằm trong quá khứ hoặc đã có trong dataset, dự đoán theo cách cũ:
+    if target_date <= last_date:
+        # Tìm hàng ứng với target_date
+        target_rows = df_city_sorted[df_city_sorted["datetime"] == target_date]
+        if target_rows.empty:
+            raise ValueError("The specified date was not found in the dataset for this city.")
+        target_idx_city = target_rows.index[0]
+        if target_idx_city < 7:
+            raise ValueError("Not enough historical data (need 7 days before the target date) for this city.")
+        input_seq_df = df_city_sorted.iloc[target_idx_city - 7: target_idx_city][feature_columns]
+        input_seq = input_seq_df.values.astype(np.float32)
+        input_seq_scaled = scaler.transform(input_seq)
+        x = torch.tensor(input_seq_scaled).unsqueeze(0).to(device)  # (1, 7, input_dim)
+        x = x.float()
+        model.eval()
+        with torch.no_grad():
+            prediction = model(x)
+            prediction = prediction.squeeze().cpu().numpy()  # (output_dim,)
+        scaler_target = StandardScaler(targets=target_indices)
+        scaler_target.mean = scaler.mean
+        scaler_target.std = scaler.std
+        prediction_inv = scaler_target.inverse_transform(prediction)
+        return prediction_inv
 
-    # Extract the true values for [temp, humidity, precip] from the target row.
-    true_values = true_row[feature_columns].values.astype(np.float32)[target_indices]
+    # Nếu target_date nằm trong tương lai: dự đoán tuần tự từ ngày cuối dataset cho tới target_date
+    else:
+        # Vòng lặp dự đoán từ last_date đến target_date (không bao gồm target_date đã có trong dataset)
+        while last_date < target_date:
+            # Lấy 7 ngày cuối cùng từ dataset hiện tại
+            input_seq_df = df_city_sorted.iloc[-7:][feature_columns]
+            input_seq = input_seq_df.values.astype(np.float32)
+            input_seq_scaled = scaler.transform(input_seq)
+            x = torch.tensor(input_seq_scaled).unsqueeze(0).to(device)
+            x = x.float()
 
-    # Print the comparison.
-    print("\nFor target date {}:".format(date_str))
-    print("Predicted values [temp, humidity, precip]:", [f"{val:.2f}" for val in prediction_inv])
-    print("True values      [temp, humidity, precip]:", [f"{val:.2f}" for val in true_values])
+            model.eval()
+            with torch.no_grad():
+                prediction = model(x)
+                prediction = prediction.squeeze().cpu().numpy()
+            scaler_target = StandardScaler(targets=target_indices)
+            scaler_target.mean = scaler.mean
+            scaler_target.std = scaler.std
+            prediction_inv = scaler_target.inverse_transform(prediction)
+
+            # Tạo 1 row mới dựa trên row cuối hiện tại, cập nhật datetime và các target với giá trị dự đoán.
+            new_row = df_city_sorted.iloc[-1].copy()
+            new_date = last_date + datetime.timedelta(days=1)
+            new_row["datetime"] = new_date
+            # Cập nhật các giá trị mục tiêu (temp, humidity, precip)
+            for j, col in enumerate(target_names):
+                new_row[col] = prediction_inv[j]
+
+            # Nếu cần, có thể cập nhật thêm các feature khác theo một logic nhất định.
+            # Ở đây, ta giữ nguyên các giá trị feature còn lại từ row cuối.
+            df_city_sorted = pd.concat([df_city_sorted, new_row.to_frame().T], ignore_index=True)
+            last_date = new_date  # cập nhật last_date
+
+        # Sau khi vòng lặp hoàn thành, prediction_inv là giá trị dự đoán cho target_date.
+        return prediction_inv
 
 
+# Ví dụ cách gọi hàm:
 if __name__ == "__main__":
-    main()
+    # Giả sử muốn dự đoán cho thành phố Hanoi (0) vào ngày "01/01/2025"
+    y_pred = predict(0, "13/03/2025")
+    print("Dự đoán [temp, humidity, precip]:", y_pred)
